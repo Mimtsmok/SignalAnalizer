@@ -5,10 +5,6 @@ from queue import Queue
 
 import matplotlib.pyplot as plt
 
-# Set Frequency To 2500 Hertz
-frequency = 5500
-# Set Duration To 100 ms == 0.1 second
-duration = 100  
 
 def beep():
     winsound.Beep(697, 400)

@@ -1,8 +1,6 @@
 import configparser
 import tkinter as tk
-from multiprocessing import Process
-from queue import Queue
-from threading import Thread
+from multiprocessing import Process, Queue
 from tkinter.messagebox import showinfo
 from tkinter.ttk import Button, Entry, Label
 
@@ -71,12 +69,11 @@ class App(tk.Tk):
 
     def run_button(self):
         q = Queue()
-        # self.t1 = Thread(target=port_listener, args=(q, ))
-        # self.t2 = Thread(target=plotter, args=(q, ))
         self.t1 = Process(target=port_listener, args=(q, ))
         self.t2 = Process(target=plotter, args=(q, ))
         self.t1.start()
         self.t2.start()
+        
         showinfo(title='Information', message="Runned!")
 
     def save_button(self):
@@ -90,12 +87,11 @@ class App(tk.Tk):
         showinfo(title="Information", message="Saved!")
     
     def on_closing(self):
-        # TODO close threads
-        print(self.t1)
         if self.t1:
             self.t1.kill()
             self.t2.kill()
-        pass
+        self.destroy()
+
 
 
 if __name__ == "__main__":

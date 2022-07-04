@@ -1,5 +1,6 @@
 import asyncio
 import configparser
+import os
 import re
 import socket
 import tkinter as tk
@@ -10,9 +11,6 @@ from tkinter.scrolledtext import ScrolledText
 from tkinter.ttk import Button, Entry, Label
 
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,
-                                               NavigationToolbar2Tk)
-from matplotlib.figure import Figure
 
 
 class Listener:
@@ -111,15 +109,27 @@ class Window(tk.Tk):
         self.button_save['command'] = self.save_button
         self.button_save.pack()
 
+        # Stop Button
+        self.button_stop = Button(self, text='Остановить')
+        self.button_stop['command'] = self.stop_button
+        self.button_stop.pack()
+
         # Scrolled text
-        self.log_output = ScrolledText(self, width=720, height = 640)
+        self.log_output = ScrolledText(self, width=720, height=640)
         self.log_output.pack(side='left')
         self.task = None
 
+        # Initialize listener and plotter
+        self.listener = None
+        self.plotter = None
+
     async def show(self):
         while True:
-            self.winfo_toplevel().update()
-            await asyncio.sleep(.1)
+            try:
+                self.winfo_toplevel().update()
+                await asyncio.sleep(.1)
+            except Exception as ex:
+                os._exit(0)
 
     @staticmethod
     def beep(num: int, freq: int, dur: int) -> None:
@@ -198,8 +208,9 @@ class Window(tk.Tk):
         self.buffer_size = int(self.buffer_entry.get())
 
         # Processes
-        self.listener = Listener(self.udp_port)
-        self.plotter = Plotter(self.sma_interval, self.buffer_size)
+        if not self.listener:
+            self.listener = Listener(self.udp_port)
+            self.plotter = Plotter(self.sma_interval, self.buffer_size)
 
         # Run proccesses
         self.task = self.loop.create_task(self.iteration())
@@ -214,9 +225,9 @@ class Window(tk.Tk):
             self.config.write(config_file)
 
         showinfo(title="Information", message="Saved!")
-
-    def on_closing(self):
-        self.destroy()
+    
+    def stop_button(self):
+        self.task.cancel()
 
 
 asyncio.run(App().exec())

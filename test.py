@@ -9,6 +9,7 @@ from queue import Queue
 from tkinter.messagebox import showinfo
 from tkinter.scrolledtext import ScrolledText
 from tkinter.ttk import Button, Entry, Label
+import select
 
 import matplotlib.pyplot as plt
 
@@ -26,6 +27,8 @@ class Listener:
 
         # Bind the socket to localhost on UDP_PORT
         self.sock.bind(('localhost', port))
+
+        self.sock.setblocking(0)
 
 
 class Plotter:
@@ -119,10 +122,6 @@ class Window(tk.Tk):
         self.log_output.pack(side='left')
         self.task = None
 
-        # Initialize listener and plotter
-        self.listener = None
-        self.plotter = None
-
     async def show(self):
         while True:
             try:
@@ -137,13 +136,15 @@ class Window(tk.Tk):
             winsound.Beep(freq, dur)
 
     async def listen_port(self):
-        msg_received = self.listener.sock.recv(65535)
-        msg = msg_received.decode("UTF-8")
-        self.log_output.insert(tk.END, f"{msg}\n")
-        self.log_output.see(tk.END)
-        db_val = re.search(self.listener.DB_REGEX, msg)
-        if db_val:
-            self.buffer.put(int(db_val.group(1)))
+        ready = select.select([self.listener.sock], [], [], 2)
+        if ready[0]:
+            msg_received = self.listener.sock.recv(65535)
+            msg = msg_received.decode("UTF-8")
+            self.log_output.insert(tk.END, f"{msg}\n")
+            self.log_output.see(tk.END)
+            db_val = re.search(self.listener.DB_REGEX, msg)
+            if db_val:
+                self.buffer.put(int(db_val.group(1)))
         await asyncio.sleep(0)
 
     async def plot(self):
@@ -208,9 +209,9 @@ class Window(tk.Tk):
         self.buffer_size = int(self.buffer_entry.get())
 
         # Processes
-        if not self.listener:
-            self.listener = Listener(self.udp_port)
-            self.plotter = Plotter(self.sma_interval, self.buffer_size)
+        # if not self.listener:
+        self.listener = Listener(self.udp_port)
+        self.plotter = Plotter(self.sma_interval, self.buffer_size)
 
         # Run proccesses
         self.task = self.loop.create_task(self.iteration())
@@ -225,9 +226,11 @@ class Window(tk.Tk):
             self.config.write(config_file)
 
         showinfo(title="Information", message="Saved!")
-    
+
     def stop_button(self):
         self.task.cancel()
-
+        self.listener.sock.close()
+        plt.close()
+        
 
 asyncio.run(App().exec())

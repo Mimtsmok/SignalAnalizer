@@ -26,7 +26,7 @@ class Listener:
         )
 
         # Bind the socket to localhost on UDP_PORT
-        self.sock.bind(('localhost', port))
+        self.sock.bind(('', port))
 
         self.sock.setblocking(0)
 
@@ -139,6 +139,7 @@ class Window(tk.Tk):
         ready = select.select([self.listener.sock], [], [], 2)
         if ready[0]:
             msg_received = self.listener.sock.recv(65535)
+            
             msg = msg_received.decode("UTF-8")
             self.log_output.insert(tk.END, f"{msg}\n")
             self.log_output.see(tk.END)
@@ -231,6 +232,6 @@ class Window(tk.Tk):
         self.task.cancel()
         self.listener.sock.close()
         plt.close()
-        
+        self.log_output.insert(tk.END, "=============== ENDED ===============")
 
 asyncio.run(App().exec())

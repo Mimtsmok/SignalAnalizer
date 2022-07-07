@@ -2,10 +2,9 @@ import socket
 import time
 
 
-UDP_IP = "localhost"
-UDP_PORT = 4163
+UDP_IP = input("HOST: ") # 10.191.99.84
+UDP_PORT = int(input("PORT: ")) # 4163
 
-# byte_message = bytes("Hello, World!", "utf-8")
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 with open("fake_file.txt", "rb") as file:

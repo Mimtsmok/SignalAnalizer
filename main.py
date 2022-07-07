@@ -1,92 +1,114 @@
 import re
-import socket
-import winsound
 from queue import Queue
+from socket import AF_INET, IPPROTO_UDP, SOCK_RAW, socket
+from winsound import Beep
+import matplotlib.pyplot as plt
+from math import sin, cos, pi
 
-# DB_REGEX = r"db=([\d-]+)\(([\d-]+),([\d-]+)\)"
-# AVG_INTERVAL = 10
-# BUFFER = 50
+
+def beep(num: int, freq: int, dur: int) -> None:
+    for i in range(num):
+        Beep(freq, dur)
+
+def auto_beep(min_val, avg_value, range) -> None:
+    # Beep on condition
+    if avg_value <= min_val:
+        beep(4, 941, 50)
+    elif avg_value < min_val + range:
+        beep(3, 852, 100)
+    elif avg_value < min_val + 2 * range:
+        beep(2, 770, 200)
+    elif avg_value < min_val + 3 * range:
+        beep(1, 697, 400)
+    else:
+        beep(1, 697, 800)
+
+# Constants
+DB_REGEX = r"db=([\d-]+)\(([\d-]+),([\d-]+)\)"
+# Inputs
+UDP_PORT = int(input("PORT: "))
+AVG_INTERVAL = int(input("AVG_INTERVAL: "))
+BUFFER = int(input("BUFFER: "))
+
 
 try:
-    UDP_IP = "localhost"
-    UDP_PORT = 4163  # 65432
+    # Connection
+    UDP_IP = ""
 
-    sock = socket.socket(
-        socket.AF_INET,
-        socket.SOCK_RAW, 
-        socket.IPPROTO_UDP
+    sock = socket(
+        AF_INET,
+        SOCK_RAW,
+        IPPROTO_UDP
     )
 
     sock.bind((UDP_IP, UDP_PORT))
 
+    # Plot settings
+    max = 0
+    min = 100
+
+    dbs = Queue(AVG_INTERVAL)
+    x = Queue(BUFFER)
+    y = Queue(BUFFER)
+
+    for i in range(AVG_INTERVAL):
+        dbs.put(0)
+
+    for i in range(BUFFER):
+        x.put(i - BUFFER + 1)
+        y.put(0)
+
+    plt.figure(figsize=(6, 6))
 
     while True:
-        msg_received = sock.recv(65535)
-        print(msg_received)
-        # try:
-        #     print(msg_received[28:].decode("UTF-8"))
-        # except UnicodeDecodeError as ex_dec:
-        #     print("wrong data...")
-        # if msg_received.decode("UTF-8") == "":
-        #     break
-        # else:
-            # msg = msg_received.decode("UTF-8")
-            
+        raw_data, addr = sock.recvfrom(65535)
+        # print(addr, raw_data)
+        try:
+            # Print
+            decoded_data = raw_data[28:].decode("UTF-8")
+            print(decoded_data)
+
+            # Compute
+            db_val = re.search(DB_REGEX, decoded_data)
+            if db_val:
+                # X
+                x_lower = x.get()
+                x_higher = x_lower + BUFFER - 1
+                x.put(x_higher)
+
+                # SMA
+                dbs.get()
+                dbs.put(int(db_val.group(1)))
+                avg_val = sum(dbs.queue) / AVG_INTERVAL
+
+                # Y
+                y.get()
+                y.put(avg_val)
+
+                # # Plot
+                plt.cla()
+                plt.xlim([-1, 1])
+                plt.ylim([0, 1])
+                # plt.axhline(y=max, color='r', linestyle='-')
+                # plt.axhline(y=min, color='g', linestyle='-')
+                # plt.plot(x.queue, y.queue)
+                plt.plot([0, cos(avg_val * 1.8 / 180 * pi)], [0, sin(avg_val * 1.8 / 180 * pi)])
+                plt.pause(0.1)
+
+                # if x_higher > AVG_INTERVAL:
+                if i > AVG_INTERVAL:
+                    # Check min and max
+                    if avg_val > max:
+                        max = avg_val
+                    if avg_val < min:
+                        min = avg_val                  
+
+                    auto_beep(min, avg_val, 10)
+
+        except UnicodeDecodeError as ex_dec:
+            pass
+
 except Exception as ex:
     print(ex)
-    input("Press Enter to continue...")
 
 input("Press Enter to continue...")
-# max = 0
-# min = 100
-
-# dbs = Queue(AVG_INTERVAL)
-# x = Queue(BUFFER)
-# y = Queue(BUFFER)
-
-# for i in range(AVG_INTERVAL):
-#     dbs.put(0)
-
-# for i in range(BUFFER):
-#     x.put(0)
-#     y.put(0)
-
-# plt.figure(figsize=(12, 6))
-# plt.ylim([20, 50])
-# plt.show()
-
-# i = -1
-
-# print("Hello!")
-
-        # db_val = re.search(DB_REGEX, msg)
-        # if db_val:
-        #     i += 1
-        #     x_lower = x.get()
-        #     x.put(i)
-        #     dbs.get()
-        #     dbs.put(int(db_val.group(1)))
-        #     avg_val = sum(dbs.queue) / AVG_INTERVAL
-        #     y.get()
-        #     y.put(avg_val)
-
-        #     if avg_val > max:
-        #         max = avg_val
-        #     elif avg_val < min and i > AVG_INTERVAL:
-        #         min = avg_val
-
-        # plt.cla()
-        # plt.xlim([x_lower, i])
-        # plt.axhline(y=max, color='r', linestyle='-')
-        # plt.axhline(y=min, color='g', linestyle='-')
-        # plt.plot(x.queue, y.queue)
-        # plt.pause(0.3)
-
-        # if avg_val < 20:
-        #     quadro_beep()
-        # elif avg_val < 30:
-        #     triple_beep()
-        # elif avg_val < 40:
-        #     double_beep()
-        # else:
-        #     beep()

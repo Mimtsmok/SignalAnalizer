@@ -1,11 +1,11 @@
 import configparser
 import re
-import socket
 import tkinter as tk
 import winsound
 from multiprocessing import Process
 from multiprocessing import Queue as mpq
 from queue import Queue
+from socket import AF_INET, IPPROTO_UDP, SOCK_RAW, socket
 from tkinter.messagebox import showinfo
 from tkinter.ttk import Button, Entry, Label
 
@@ -22,24 +22,32 @@ def listen_port(buffer: Queue, port: int):
     DB_REGEX = r"db=([\d-]+)\(([\d-]+),([\d-]+)\)"
 
     # Initialize socker for UDP (SOCK_DGRAM)
-    sock = socket.socket(
-        socket.AF_INET,
-        socket.SOCK_DGRAM
+    sock = socket(
+        AF_INET,
+        SOCK_RAW,
+        IPPROTO_UDP
     )
 
     # Bind the socket to localhost on UDP_PORT
-    sock.bind(('localhost', port))
+    sock.bind(("", port))
 
     # Start listen
     while True:
-        msg_received = sock.recv(65535)
-        if msg_received.decode("UTF-8") == "":
-            break
-        else:
-            msg = msg_received.decode("UTF-8")
-            db_val = re.search(DB_REGEX, msg)
+
+        raw_data, _ = sock.recvfrom(65535)
+
+        try:
+            decoded_data = raw_data[28:].decode("UTF-8")
+            print(decoded_data)
+
+            db_val = re.search(DB_REGEX, decoded_data)
+
             if db_val:
                 buffer.put(int(db_val.group(1)))
+
+        except UnicodeDecodeError as ex:
+            print(ex)
+            
 
 
 def plot(buffer: Queue, sma_interval: int, buffer_size: int):
@@ -93,7 +101,7 @@ def plot(buffer: Queue, sma_interval: int, buffer_size: int):
                     max = avg_val
                 elif avg_val < min:
                     min = avg_val
-
+            
             # Replot graph
             plt.cla()
             plt.grid()
@@ -161,10 +169,6 @@ class App(tk.Tk):
         # Processes
         self.listener = None
         self.plotter = None
-
-        # Plot
-        f = Figure(figsize=(5,4), dpi=100)
-        a = f.add_subplot(111)
 
     def run_button(self):
         # Initialize parameters for listener

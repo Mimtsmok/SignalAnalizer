@@ -1,6 +1,6 @@
 import re
 from queue import Queue
-from socket import AF_INET, IPPROTO_UDP, SOCK_RAW, socket
+from socket import AF_INET, IPPROTO_UDP, SOCK_DGRAM, socket
 from winsound import Beep
 import matplotlib.pyplot as plt
 from math import sin, cos, pi
@@ -23,12 +23,29 @@ def auto_beep(min_val, avg_value, range) -> None:
     else:
         beep(1, 697, 800)
 
+mult = 1.8 / 180 * pi
+
+def get_line(value):
+    return [0, -cos(value * mult)], [0, sin(value * mult)]
+
+def get_sep_line(value):
+    return [-0.9*cos(value * mult), -1.1*cos(value * mult)], [0.9*sin(value * mult), 1.1*sin(value * mult)]
+
+def get_sep_text(value):
+    return (-1.1*cos(value * mult), 1.1*sin(value * mult), str(value))
+
 # Constants
 DB_REGEX = r"db=([\d-]+)\(([\d-]+),([\d-]+)\)"
 # Inputs
-UDP_PORT = int(input("PORT: "))
-AVG_INTERVAL = int(input("AVG_INTERVAL: "))
-BUFFER = int(input("BUFFER: "))
+UDP_PORT = 4163 # int(input("PORT: "))
+AVG_INTERVAL = 10 # int(input("AVG_INTERVAL: "))
+BUFFER = 50 # int(input("BUFFER: "))
+
+fig, ax = plt.subplots()
+border = plt.Circle((0, 0), 1, color='black', fill=False)
+separators = [get_sep_line(x) for x in range(10, 100, 10)]
+sep_text = [get_sep_text(x) for x in range(10, 100, 10)]
+ax.add_patch(border)
 
 
 try:
@@ -37,7 +54,7 @@ try:
 
     sock = socket(
         AF_INET,
-        SOCK_RAW,
+        SOCK_DGRAM,
         IPPROTO_UDP
     )
 
@@ -58,15 +75,11 @@ try:
         x.put(i - BUFFER + 1)
         y.put(0)
 
-    plt.figure(figsize=(6, 6))
-
     while True:
         raw_data, addr = sock.recvfrom(65535)
-        # print(addr, raw_data)
         try:
             # Print
             decoded_data = raw_data[28:].decode("UTF-8")
-            print(decoded_data)
 
             # Compute
             db_val = re.search(DB_REGEX, decoded_data)
@@ -87,16 +100,24 @@ try:
 
                 # # Plot
                 plt.cla()
-                plt.xlim([-1, 1])
-                plt.ylim([0, 1])
-                # plt.axhline(y=max, color='r', linestyle='-')
-                # plt.axhline(y=min, color='g', linestyle='-')
-                # plt.plot(x.queue, y.queue)
-                plt.plot([0, cos(avg_val * 1.8 / 180 * pi)], [0, sin(avg_val * 1.8 / 180 * pi)])
-                plt.pause(0.1)
+                plt.grid()
+                plt.xlim([-1.2, 1.2])
+                plt.ylim([0, 1.7])
+
+                ax.add_patch(border)
+                for i in range(9):
+                    # print(separators)
+                    plt.plot(*separators[i], "black")
+                    plt.text(*sep_text[i])
+
+                plt.plot(*get_sep_line(min), "g")
+                plt.plot(*get_sep_line(max), "r")
+                plt.plot(*get_line(avg_val))
+                plt.draw()
+                plt.pause(0.01)
 
                 # if x_higher > AVG_INTERVAL:
-                if i > AVG_INTERVAL:
+                if x_higher > AVG_INTERVAL:
                     # Check min and max
                     if avg_val > max:
                         max = avg_val

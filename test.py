@@ -6,7 +6,7 @@ import select
 import tkinter as tk
 import winsound
 from queue import Queue
-from socket import AF_INET, IPPROTO_UDP, SOCK_RAW, socket
+from socket import AF_INET, IPPROTO_UDP, SOCK_RAW, socket, SOCK_DGRAM
 from tkinter.messagebox import showinfo
 from tkinter.scrolledtext import ScrolledText
 from tkinter.ttk import Button, Entry, Label
@@ -24,7 +24,8 @@ class Listener:
         # Initialize socker for UDP (SOCK_DGRAM)
         self.sock = socket(
             AF_INET,
-            SOCK_RAW,
+            SOCK_DGRAM,
+            # SOCK_RAW,
             IPPROTO_UDP
         )
 
@@ -298,10 +299,10 @@ class Window(tk.Tk):
 
     def stop_button(self):
         self.task.cancel()
-        self.listener.sock.detach()
+        # self.listener.sock.detach()
         self.listener.sock.close()
         plt.close()
-        self.log_output.insert(tk.END, "=============== ENDED ===============")
+        self.log_output.insert(tk.END, "=============== ENDED =============\n")
 
 
 asyncio.run(App().exec())

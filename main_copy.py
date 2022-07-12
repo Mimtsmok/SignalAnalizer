@@ -2,13 +2,14 @@ import re
 from queue import Queue
 from socket import AF_INET, IPPROTO_UDP, SOCK_DGRAM, socket
 from winsound import Beep
+
 import matplotlib.pyplot as plt
-from math import sin, cos, pi
 
 
 def beep(num: int, freq: int, dur: int) -> None:
     for i in range(num):
         Beep(freq, dur)
+
 
 def auto_beep(min_val, avg_value, range) -> None:
     # Beep on condition
@@ -23,12 +24,15 @@ def auto_beep(min_val, avg_value, range) -> None:
     else:
         beep(1, 697, 800)
 
+
 # Constants
 DB_REGEX = r"db=([\d-]+)\(([\d-]+),([\d-]+)\)"
 # Inputs
-UDP_PORT = 4163 # int(input("PORT: "))
-AVG_INTERVAL = 10 # int(input("AVG_INTERVAL: "))
-BUFFER = 50 # int(input("BUFFER: "))
+UDP_PORT = 4163  # int(input("PORT: "))
+AVG_INTERVAL = 10  # int(input("AVG_INTERVAL: "))
+BUFFER = 50  # int(input("BUFFER: "))
+
+plt.figure(figsize=(2, 4))
 
 try:
     # Connection
@@ -82,12 +86,14 @@ try:
 
                 # # Plot
                 plt.cla()
-                plt.grid()
-                plt.xlim([-0.2, 0.2])
-                # plt.ylim([0, 100])
-                plt.axhline(y=min, color = 'g', linestyle = '--')
-                plt.axhline(y=max, color = 'r', linestyle = '--')
-                plt.axhline(y=avg_val, color = 'b', linestyle = '-')
+                # plt.grid()
+                # plt.xlim([-0.2, 0.2])
+                plt.ylim([0, max+5])
+                plt.bar(0, avg_val, 2)
+                plt.axhline(y=min, color='r', linestyle='--')
+                plt.axhline(y=max, color='r', linestyle='--')
+                # plt.axhline(y=avg_val, color = 'b', linestyle = '-')
+
                 plt.draw()
                 plt.pause(0.01)
 
@@ -97,7 +103,7 @@ try:
                     if avg_val > max:
                         max = avg_val
                     if avg_val < min:
-                        min = avg_val                  
+                        min = avg_val
 
                     auto_beep(min, avg_val, 10)
 

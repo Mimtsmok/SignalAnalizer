@@ -2,8 +2,8 @@ import socket
 import time
 
 
-UDP_IP = input("HOST: ") # 10.191.99.84
-UDP_PORT = int(input("PORT: ")) # 4163
+UDP_IP = "localhost" # input("HOST: ") # 10.191.99.84
+UDP_PORT = 4163 # int(input("PORT: ")) # 4163
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
